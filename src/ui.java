@@ -3,6 +3,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.geom.QuadCurve2D;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
 
 // Class to handle Floyd-Warshall logic
 class FloydWarshallLogic {
@@ -86,11 +88,19 @@ class FloydWarshallUI extends JFrame {
     private GraphGenerator graphGenerator;
     private FloydWarshallLogic logic;
     private JPanel graphPanel;
-    private JTextArea costTableArea;
-    private JTextArea finalAnswerArea;
+    private JTable costTable;
+    private JTable finalAnswerTable;
     private Timer timer;
     private static final int INF = 100000000;
     private int currentGraphIndex = 0; // To cycle through sample graphs
+
+    // Customizable button colors
+    private Color pauseButtonBgColor = new Color(255, 71, 120, 225); // Tomato red
+    private Color pauseButtonFgColor = Color.BLACK;
+    private Color runButtonBgColor = new Color(113, 227, 113); // Lime green
+    private Color runButtonFgColor = Color.BLACK;
+    private Color newGraphButtonBgColor = new Color(135, 206, 250); // Sky blue
+    private Color newGraphButtonFgColor = Color.BLACK;
 
     public FloydWarshallUI() {
         // Start with the first sample graph
@@ -107,6 +117,20 @@ class FloydWarshallUI extends JFrame {
         JButton pauseButton = new JButton("Pause");
         JButton runButton = new JButton("Run");
         JButton newGraphButton = new JButton("New Graph");
+
+        // Customize button colors
+        pauseButton.setBackground(pauseButtonBgColor);
+        pauseButton.setForeground(pauseButtonFgColor);
+        pauseButton.setOpaque(true);
+        pauseButton.setBorderPainted(false);
+        runButton.setBackground(runButtonBgColor);
+        runButton.setForeground(runButtonFgColor);
+        runButton.setOpaque(true);
+        runButton.setBorderPainted(false);
+        newGraphButton.setBackground(newGraphButtonBgColor);
+        newGraphButton.setForeground(newGraphButtonFgColor);
+        newGraphButton.setOpaque(true);
+        newGraphButton.setBorderPainted(false);
 
         buttonPanel.add(pauseButton);
         buttonPanel.add(runButton);
@@ -126,29 +150,38 @@ class FloydWarshallUI extends JFrame {
 
         // Right panel for final answer
         JPanel rightPanel = new JPanel(new BorderLayout());
-        finalAnswerArea = new JTextArea("Final Answer\nSmallest Calculated Path Matrix");
-        finalAnswerArea.setEditable(false);
-        finalAnswerArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        rightPanel.add(finalAnswerArea, BorderLayout.CENTER);
+        JLabel finalAnswerLabel = new JLabel("Final Answer: Smallest Calculated Path Matrix");
+        rightPanel.add(finalAnswerLabel, BorderLayout.NORTH);
+        finalAnswerTable = new JTable(createTableModel(logic.getDistances(), graphGenerator.getVertices()));
+        finalAnswerTable.setBackground(new Color(211, 211, 211)); // Light gray background
+        finalAnswerTable.setRowHeight(40);
+        finalAnswerTable.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        finalAnswerTable.setEnabled(false);
+        customizeTableRenderer(finalAnswerTable);
+        rightPanel.add(new JScrollPane(finalAnswerTable), BorderLayout.CENTER);
         rightPanel.setBackground(new Color(255, 220, 220));
         rightPanel.setPreferredSize(new Dimension(200, 0));
         add(rightPanel, BorderLayout.EAST);
 
         // Bottom panel for cost table
         JPanel bottomPanel = new JPanel(new BorderLayout());
-        costTableArea = new JTextArea();
-        costTableArea.setEditable(false);
-        costTableArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        updateCostTable();
-        bottomPanel.add(costTableArea, BorderLayout.CENTER);
+        JLabel costTableLabel = new JLabel("Cost Table");
+        bottomPanel.add(costTableLabel, BorderLayout.NORTH);
+        costTable = new JTable(createTableModel(graphGenerator.getGraph(), graphGenerator.getVertices()));
+        costTable.setBackground(new Color(211, 211, 211)); // Light gray background
+        costTable.setRowHeight(30);
+        costTable.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        costTable.setEnabled(false);
+        customizeTableRenderer(costTable);
+        bottomPanel.add(new JScrollPane(costTable), BorderLayout.CENTER);
         bottomPanel.setBackground(new Color(255, 220, 220));
         bottomPanel.setPreferredSize(new Dimension(0, 150));
         add(bottomPanel, BorderLayout.SOUTH);
 
         // Timer for animation
-        timer = new Timer(500, e -> {
+        timer = new Timer(800, e -> {
             if (logic.isRunning() && logic.step()) {
-                updateCostTable();
+                //updateCostTable();
                 updateFinalAnswer();
                 graphPanel.repaint();
             } else {
@@ -188,7 +221,7 @@ class FloydWarshallUI extends JFrame {
         int V = graphGenerator.getVertices();
         int centerX = graphPanel.getWidth() / 2;
         int centerY = graphPanel.getHeight() / 2;
-        int radius = 120;
+        int radius = 150;
         Point[] points = new Point[V];
 
         // Calculate positions for vertices
@@ -283,51 +316,69 @@ class FloydWarshallUI extends JFrame {
     private void updateCostTable() {
         int[][] graph = graphGenerator.getGraph();
         int V = graphGenerator.getVertices();
-        StringBuilder sb = new StringBuilder("Cost Table\n");
-        sb.append("   ");
-        for (int j = 0; j < V; j++) {
-            sb.append(String.format("%-6d", j));
-        }
-        sb.append("\n");
-        sb.append("-".repeat(6 * (V + 1))).append("\n");
-        for (int i = 0; i < V; i++) {
-            sb.append(String.format("%-2d|", i));
-            for (int j = 0; j < V; j++) {
-                String value = graph[i][j] == INF ? "INF" : String.valueOf(graph[i][j]);
-                if (logic.isRunning() && i == logic.getCurrentI() && j == logic.getCurrentJ()) {
-                    sb.append(String.format("\u001B[31m%-6s\u001B[0m", value));
-                } else {
-                    sb.append(String.format("%-6s", value));
+        costTable.setModel(createTableModel(graph, V));
+        customizeTableRenderer(costTable);
+        if (logic.isRunning()) {
+            costTable.getColumnModel().getColumn(logic.getCurrentJ() + 1).setCellRenderer(new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                    if (row == logic.getCurrentI() && column == logic.getCurrentJ() + 1) {
+                        c.setBackground(Color.RED);
+                    } else {
+                        c.setBackground(new Color(211, 211, 211));
+                    }
+                    return c;
                 }
-            }
-            sb.append("\n");
+            });
         }
-        costTableArea.setText(sb.toString());
     }
 
     private void updateFinalAnswer() {
         int[][] dist = logic.getDistances();
         int V = graphGenerator.getVertices();
-        StringBuilder sb = new StringBuilder("Final Answer\nSmallest Calculated Path Matrix\n");
-        sb.append("   ");
-        for (int j = 0; j < V; j++) {
-            sb.append(String.format("%-6d", j));
-        }
-        sb.append("\n");
-        sb.append("-".repeat(6 * (V + 1))).append("\n");
-        for (int i = 0; i < V; i++) {
-            sb.append(String.format("%-2d|", i));
-            for (int j = 0; j < V; j++) {
-                String value = dist[i][j] == INF ? "INF" : String.valueOf(dist[i][j]);
-                if (logic.isRunning() && i == logic.getCurrentI() && j == logic.getCurrentJ()) {
-                    sb.append(String.format("\u001B[31m%-6s\u001B[0m", value));
-                } else {
-                    sb.append(String.format("%-6s", value));
+        finalAnswerTable.setModel(createTableModel(dist, V));
+        customizeTableRenderer(finalAnswerTable);
+        if (logic.isRunning()) {
+            finalAnswerTable.getColumnModel().getColumn(logic.getCurrentJ() + 1).setCellRenderer(new DefaultTableCellRenderer() {
+                @Override
+                public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                    Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                    if (row == logic.getCurrentI() && column == logic.getCurrentJ() + 1) {
+                        c.setBackground(Color.RED);
+                    } else {
+                        c.setBackground(new Color(211, 211, 211));
+                    }
+                    return c;
                 }
-            }
-            sb.append("\n");
+            });
         }
-        finalAnswerArea.setText(sb.toString());
+    }
+
+    private DefaultTableModel createTableModel(int[][] data, int V) {
+        String[] columnNames = new String[V + 1];
+        columnNames[0] = " ";
+        for (int i = 0; i < V; i++) {
+            columnNames[i + 1] = String.valueOf(i);
+        }
+        Object[][] tableData = new Object[V][V + 1];
+        for (int i = 0; i < V; i++) {
+            tableData[i][0] = i;
+            for (int j = 0; j < V; j++) {
+                tableData[i][j + 1] = data[i][j] == INF ? "INF" : data[i][j];
+            }
+        }
+        return new DefaultTableModel(tableData, columnNames);
+    }
+
+    private void customizeTableRenderer(JTable table) {
+        DefaultTableCellRenderer renderer = new DefaultTableCellRenderer();
+        renderer.setHorizontalAlignment(SwingConstants.CENTER);
+        for (int i = 0; i < table.getColumnCount(); i++) {
+            table.getColumnModel().getColumn(i).setCellRenderer(renderer);
+        }
+        table.setGridColor(Color.BLACK);
+        table.setShowGrid(true);
     }
 
     public static void main(String[] args) {

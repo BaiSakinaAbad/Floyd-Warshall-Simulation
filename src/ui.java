@@ -197,11 +197,11 @@ class FloydWarshallUI extends JFrame {
             int x = (int) (centerX + radius * Math.cos(angle));
             int y = (int) (centerY + radius * Math.sin(angle));
             points[i] = new Point(x, y);
-            g2d.setColor(Color.BLACK);
-            g2d.fillOval(x - 15, y - 15, 30, 30);
+            g2d.setColor(new Color(201, 147, 227));
+            g2d.fillOval(x - 15, y - 15, 40, 40);
             g2d.setColor(Color.WHITE);
             g2d.setFont(new Font("Arial", Font.BOLD, 12));
-            g2d.drawString("V" + i, x - 8, y + 4);
+            g2d.drawString("V" + i, x + 5, y + 6);
         }
 
         // Draw edges without overlap
@@ -210,10 +210,10 @@ class FloydWarshallUI extends JFrame {
             for (int j = 0; j < V; j++) {
                 if (graph[i][j] != INF && graph[i][j] != 0) {
                     if (graph[j][i] != INF && graph[j][i] != 0 && i < j) {
-                        drawCurvedArrow(g2d, points[i], points[j], 20);
-                        drawCurvedArrow(g2d, points[j], points[i], -20);
-                        Point mid1 = getCurvedMidPoint(points[i], points[j], 20);
-                        Point mid2 = getCurvedMidPoint(points[j], points[i], -20);
+                        drawCurvedArrow(g2d, points[i], points[j], 30);
+                        drawCurvedArrow(g2d, points[j], points[i], -30);
+                        Point mid1 = getCurvedMidPoint(points[i], points[j], 30);
+                        Point mid2 = getCurvedMidPoint(points[j], points[i], -30);
                         g2d.drawString(String.valueOf(graph[i][j]), mid1.x, mid1.y);
                         g2d.drawString(String.valueOf(graph[j][i]), mid2.x, mid2.y);
                     } else {
